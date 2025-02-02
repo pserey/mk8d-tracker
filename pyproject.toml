@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "mk8d-stats-tracker"
+version = "0.1.0"
+description = ""
+authors = ["Pedro Serey <serey.pedro@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+discord-py = "^2.4.0"
+python-dotenv = "^1.0.1"
+tinydb = "^4.8.2"
+
+[tool.poetry.group.dev.dependencies]
+black = "^25.1.0"
+isort = "^6.0.0"
+taskipy = "^1.14.1"
+
+[tool.taskipy.tasks]
+
+run = 'python mk8d_stats_tracker/bot.py'
+format = 'black .'
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
