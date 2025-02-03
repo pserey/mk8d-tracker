@@ -5,7 +5,7 @@ from discord import app_commands
 
 from mk8d_stats_tracker.config import Config
 from mk8d_stats_tracker.database import db
-from mk8d_stats_tracker.util import placement_to_string
+from mk8d_stats_tracker.util import placement_to_string, convert_to_isoformat
 
 # class MK8DBot(commands.Bot):
 class MK8DBot(discord.Client):
@@ -25,11 +25,16 @@ intents.message_content = True
 bot = MK8DBot(intents=intents)
 
 class EndVRModal(discord.ui.Modal):
+
+    def __init__(self, title):
+        super().__init__(title=title)
+
     end_vr = discord.ui.TextInput(label='Ending VR', min_length=1, max_length=8)
 
     async def on_submit(self, interaction: discord.Interaction):
         end_vr = int(self.end_vr.value)
-        session = db.get_session(interaction.user.id, datetime.date.today().isoformat())
+        session_date = db.get_current_session()
+        session = db.get_session(interaction.user.id, session_date)
 
         session['end_vr'] = end_vr
         db.sessions.update(session, doc_ids=[session.doc_id])
@@ -41,6 +46,7 @@ class EndVRModal(discord.ui.Modal):
         else:
             msg = f'VR change: -{vr_diff} :sob:'
 
+        db.deactivate_current_session()
         await interaction.response.send_message(msg + f'\n\nCome back tomorrow for your next session!', ephemeral=True)
 
 class TrackSelectView(discord.ui.View):
@@ -57,14 +63,15 @@ class TrackSelectView(discord.ui.View):
 
     async def select_callback(self, interaction: discord.Interaction):
         selected_track = interaction.data['values'][0]
-        session = db.get_session(interaction.user.id, datetime.date.today().isoformat())
+        session_date = db.get_current_session()
+        session = db.get_session(interaction.user.id, session_date)
         races = len(session.get('races'))
         ended = False
 
-        if races == 9:
+        if races >= 2:
             ended = True
 
-        db.add_race(interaction.user.id, self.placement, selected_track)
+        db.add_race(session, self.placement, selected_track, self.cc_mode)
 
         if self.placement <= 6:
             msg = f'_Congrats!_ :partying_face: \n\nRegistered {placement_to_string(self.placement)} place for {self.cc_mode} in **{selected_track}**'
@@ -107,6 +114,7 @@ class CCModeButtons(discord.ui.View):
         await interaction.response.send_message(f'Select the track for {cc_mode}:', view=TrackSelectView(categories, cc_mode, self.placement), ephemeral=True)
 
 class PlacementView(discord.ui.View):
+
     def __init__(self):
         super().__init__()
 
@@ -169,18 +177,24 @@ class StartSessionModal(discord.ui.Modal):
 
         self.user_id = user_id
 
-    # TODO: add option to define a date (historical registering)
     start_vr = discord.ui.TextInput(label='Starting VR', min_length=1, max_length=8)
+    date = discord.ui.TextInput(label='Date (dd-mm-yyyy)', min_length=1, max_length=10, required=False)
 
     async def on_submit(self, interaction: discord.Interaction):
         start_vr = int(self.start_vr.value)
+        date = self.date.value
+
+        if date:
+            date = convert_to_isoformat(date)
+        else:
+            date = datetime.date.today().isoformat()
 
         if start_vr < 0:
             await interaction.response.send_message('Invalid VR. Please enter a positive number.', ephemeral=True)
             return
 
-        today = datetime.date.today().isoformat()
-        db.start_session(self.user_id, today, start_vr)
+        db.start_session(self.user_id, date, start_vr)
+        db.insert_current_session_date(date)
 
         await interaction.response.send_message('Session started! Good luck!', ephemeral=True)
 
@@ -194,12 +208,6 @@ async def on_ready():
 @bot.tree.command(name='start_session', description='Start a new session')
 async def start_session(interaction: discord.Interaction):
     user_id = interaction.user.id
-    today = datetime.date.today().isoformat()
-    existing_session = db.get_session(user_id, today)
-
-    if existing_session:
-        await interaction.response.send_message('You already have a session for today.')
-        return
 
     await interaction.response.send_modal(StartSessionModal('Input your starting VR', user_id))
 

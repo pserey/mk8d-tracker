@@ -1,3 +1,5 @@
+from datetime import datetime
+
 tracks = [
     {"name": "SNES Mario Circuit 3", "category": "snes_dlc"},
     {"name": "SNES Bowser Castle 3", "category": "snes_dlc"},
@@ -102,3 +104,9 @@ def placement_to_string(placement: int):
     strings = ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"]
 
     return strings[placement - 1]
+
+
+
+def convert_to_isoformat(date_str):
+    date_obj = datetime.strptime(date_str, '%d-%m-%Y')
+    return date_obj.date().isoformat()
