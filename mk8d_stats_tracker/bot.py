@@ -68,7 +68,7 @@ class TrackSelectView(discord.ui.View):
         races = len(session.get('races'))
         ended = False
 
-        if races >= 2:
+        if races >= 9:
             ended = True
 
         db.add_race(session, self.placement, selected_track, self.cc_mode)
