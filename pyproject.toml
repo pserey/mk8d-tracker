@@ -21,6 +21,7 @@ taskipy = "^1.14.1"
 run = 'python mk8d_stats_tracker/bot.py'
 format = 'black .'
 clean_db = 'rm -rf database/'
+export_db = 'python mk8d_stats_tracker/data_cli.py export --file db_output.csv'
 
 [build-system]
 requires = ["poetry-core"]
