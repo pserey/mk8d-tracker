@@ -61,9 +61,7 @@ class TrackSelectView(discord.ui.View):
         races = len(session.get('races'))
         ended = False
 
-        # TODO: CHANGE BACK TO 9
-        # if races == 9:
-        if races > 5:
+        if races == 9:
             ended = True
 
         db.add_race(interaction.user.id, self.placement, selected_track)
