@@ -1,17 +1,28 @@
 import discord
 import datetime
 
-from discord.ext import commands
+from discord import app_commands
 
 from mk8d_stats_tracker.config import Config
 from mk8d_stats_tracker.database import db
 from mk8d_stats_tracker.util import placement_to_string
 
+# class MK8DBot(commands.Bot):
+class MK8DBot(discord.Client):
+    def __init__(self, intents: discord.Intents):
+        super().__init__(intents=intents)
+        self.tree = app_commands.CommandTree(self)
+
+    async def setup_hook(self):
+        guild = discord.Object(id=Config.GUILD_ID)
+        self.tree.copy_global_to(guild=guild)
+        await self.tree.sync(guild=guild)
+
 intents = discord.Intents.default()
 intents.message_content = True
 
-bot = commands.Bot(command_prefix='/', intents=intents)
-
+# bot = commands.Bot(command_prefix='/', intents=intents)
+bot = MK8DBot(intents=intents)
 
 class EndVRModal(discord.ui.Modal):
     end_vr = discord.ui.TextInput(label='Ending VR', min_length=1, max_length=8)
@@ -152,36 +163,49 @@ class PlacementView(discord.ui.View):
     async def select_12th(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.show_cc_select(interaction, 12)
 
+class StartSessionModal(discord.ui.Modal):
+
+    def __init__(self, title, user_id):
+        super().__init__(title=title)
+
+        self.user_id = user_id
+
+    start_vr = discord.ui.TextInput(label='Starting VR', min_length=1, max_length=8)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        start_vr = int(self.start_vr.value)
+
+        if start_vr < 0:
+            await interaction.response.send_message('Invalid VR. Please enter a positive number.', ephemeral=True)
+            return
+
+        today = datetime.date.today().isoformat()
+        db.start_session(self.user_id, today, start_vr)
+
+        await interaction.response.send_message('Session started! Good luck!', ephemeral=True)
+
+
 @bot.event
 async def on_ready():
     print(f'Logged in as {bot.user} (ID: {bot.user.id})')
     print('------')
 
 
-@bot.command()
-async def start_session(ctx, start_vr: int = None):
-    if start_vr is None:
-        await ctx.send('Starting a session needs an initial VR. Please provide a VR value.')
-        return
-
-    if start_vr < 0:
-        await ctx.send('Invalid VR. Please enter a positive number.')
-        return
-
-    user_id = ctx.author.id
+@bot.tree.command(name='start_session', description='Start a new session')
+async def start_session(interaction: discord.Interaction):
+    user_id = interaction.user.id
     today = datetime.date.today().isoformat()
     existing_session = db.get_session(user_id, today)
+
     if existing_session:
-        await ctx.send('You already have a session for today.')
+        await interaction.response.send_message('You already have a session for today.')
         return
 
-    db.start_session(user_id, today, start_vr)
-    await ctx.send('Session started.')
+    await interaction.response.send_modal(StartSessionModal('Input your starting VR', user_id))
 
-
-@bot.command()
-async def record(ctx: commands.Context):
-    await ctx.send('Select Your Placement:', view=PlacementView())
+@bot.tree.command(name='record')
+async def record(interaction: discord.Interaction):
+    await interaction.response.send_message('Select Your Placement:', view=PlacementView())
 
 
 if __name__ == '__main__':

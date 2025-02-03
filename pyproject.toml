@@ -20,6 +20,7 @@ taskipy = "^1.14.1"
 
 run = 'python mk8d_stats_tracker/bot.py'
 format = 'black .'
+clean_db = 'rm -rf database/'
 
 [build-system]
 requires = ["poetry-core"]
