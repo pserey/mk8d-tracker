@@ -4,6 +4,7 @@ from tinydb import TinyDB, Query
 from pathlib import Path
 
 from mk8d_stats_tracker.config import Config
+from mk8d_stats_tracker.util import tracks
 
 class Database:
     def __init__(self):
@@ -13,11 +14,14 @@ class Database:
         self.sessions = TinyDB(self.db_path / 'sessions.json')
         self.tracks = TinyDB(self.db_path / 'tracks.json')
 
+        if not self.tracks.all():
+            self.tracks.insert_multiple(tracks)
+
     def get_session(self, user_id, date):
         return self.sessions.get((Query().user_id == user_id) & (Query().date == date))
 
     def start_session(self, user_id, date, start_vr):
-        self.sessions.insert({'user_id': user_id, 'date': date, 'start_vr': start_vr, 'races': []})
+        self.sessions.insert({'user_id': user_id, 'date': date, 'start_vr': start_vr, 'end_vr': None, 'races': []})
 
     def add_race(self, user_id, placement, track_name):
         today = datetime.date.today().isoformat()
@@ -29,4 +33,3 @@ class Database:
             self.sessions.update(session, doc_ids=[session.doc_id])
 
 db = Database()
-Session = Query()
