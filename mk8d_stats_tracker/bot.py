@@ -113,6 +113,7 @@ class PlacementView(discord.ui.View):
     async def show_cc_select(self, interaction: discord.Interaction, placement: int):
         await interaction.response.send_message('Select the CC mode:', view=CCModeButtons(placement))
 
+    # TODO: refactor this part into a for loop with add_item()
     @discord.ui.button(label="1st", style=discord.ButtonStyle.primary)
     async def select_1st(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.show_cc_select(interaction, 1)
@@ -168,6 +169,7 @@ class StartSessionModal(discord.ui.Modal):
 
         self.user_id = user_id
 
+    # TODO: add option to define a date (historical registering)
     start_vr = discord.ui.TextInput(label='Starting VR', min_length=1, max_length=8)
 
     async def on_submit(self, interaction: discord.Interaction):
